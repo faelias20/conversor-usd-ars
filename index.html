@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor USD / ARS</title>
+    <!-- Tailwind CSS para diseño moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between p-4">
+
+    <div class="max-w-md w-full mx-auto mt-6 bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700">
+        <h1 class="text-2xl font-bold text-center mb-6 text-emerald-400">Conversor Dólar / Peso</h1>
+
+        <!-- Selector de Tipo de Dólar -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-400 mb-2">Tipo de Cambio:</label>
+            <select id="tipoDolar" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500">
+                <option value="blue">Dólar Blue</option>
+                <option value="oficial">Dólar Oficial</option>
+                <option value="bolsa">Dólar MEP (Bolsa)</option>
+            </select>
+        </div>
+
+        <!-- Inputs de Conversión -->
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Dólares (USD)</label>
+                <input type="number" id="inputUSD" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white text-lg focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <div class="text-center font-bold text-slate-500">⇅</div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Pesos Argentinos (ARS)</label>
+                <input type="number" id="inputARS" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white text-lg focus:outline-none focus:border-emerald-500">
+            </div>
+        </div>
+
+        <!-- Indicador de Cotización Actual -->
+        <div class="mt-6 p-3 bg-slate-900/50 rounded-lg border border-slate-700/50 text-center text-sm text-slate-400" id="infoCotizacion">
+            Cargando cotización actual...
+        </div>
+    </div>
+
+    <footer class="text-center text-xs text-slate-500 py-4">
+        Optimizado para uso personal • Datos vía DolarAPI
+    </footer>
+
+    <script>
+        let cotizaciones = {};
+        const tipoDolarSelect = document.getElementById('tipoDolar');
+        const inputUSD = document.getElementById('inputUSD');
+        const inputARS = document.getElementById('inputARS');
+        const infoCotizacion = document.getElementById('infoCotizacion');
+
+        async function obtenerCotizaciones() {
+            try {
+                const response = await fetch('https://dolarapi.com/v1/dolares');
+                const data = await response.json();
+                
+                data.forEach(item => {
+                    cotizaciones[item.casa] = item;
+                });
+                
+                actualizarTextoInfo();
+                calcularDesdeUSD();
+            } catch (error) {
+                infoCotizacion.textContent = "Error al obtener cotizaciones en vivo.";
+            }
+        }
+
+        function actualizarTextoInfo() {
+            const tipo = tipoDolarSelect.value;
+            const cot = cotizaciones[tipo];
+            if (cot) {
+                infoCotizacion.innerHTML = `Compra: $${cot.compra} | Venta: $${cot.venta}`;
+            }
+        }
+
+        function calcularDesdeUSD() {
+            const tipo = tipoDolarSelect.value;
+            const cot = cotizaciones[tipo];
+            if (!cot) return;
+            const valUSD = parseFloat(inputUSD.value);
+            if (isNaN(valUSD)) {
+                inputARS.value = '';
+                return;
+            }
+            // Usamos el valor de venta para convertir USD a ARS
+            inputARS.value = (valUSD * cot.venta).toFixed(2);
+        }
+
+        function calcularDesdeARS() {
+            const tipo = tipoDolarSelect.value;
+            const cot = cotizaciones[tipo];
+            if (!cot) return;
+            const valARS = parseFloat(inputARS.value);
+            if (isNaN(valARS)) {
+                inputUSD.value = '';
+                return;
+            }
+            // Dividimos por el valor de venta
+            inputUSD.value = (valARS / cot.venta).toFixed(2);
+        }
+
+        tipoDolarSelect.addEventListener('change', () => {
+            actualizarTextoInfo();
+            calcularDesdeUSD();
+        });
+
+        inputUSD.addEventListener('input', calcularDesdeUSD);
+        inputARS.addEventListener('input', calcularDesdeARS);
+
+        // Inicializar
+        obtenerCotizaciones();
+    </script>
+</body>
+</html>
